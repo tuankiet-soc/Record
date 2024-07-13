@@ -1,0 +1,9 @@
+function importFarmList() {
+  // Get the values to be imported from the source sheet
+  var values = SpreadsheetApp.openById('1qeDlIr-_XB5oI_mE2jg6Sz_SqpQ0vMDblgn1WwJirME')
+    .getSheetByName('KPI-Raw').getRange('A:M').getValues();
+
+  // Set the values imported, starting from column J
+  SpreadsheetApp.getActive().getSheetByName('Raw KPI')
+    .getRange(1, 10, values.length, values[0].length).setValues(values);
+}
