@@ -1,0 +1,71 @@
+function botkpi() {
+  var spreadsheeet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = "BOT Alert";
+  var sheet = spreadsheeet.getSheetByName(sheetName);
+
+  var b3value = sheet.getRange("B3").getValue();
+  var b4value = sheet.getRange("B4").getValue();
+  var b5value = sheet.getRange("B5").getValue();
+  var b6value = sheet.getRange("B6").getValue();
+  var b10value = sheet.getRange("b10").getValue();
+  var b11value = sheet.getRange("b11").getValue();
+  var b12value = sheet.getRange("b12").getValue();
+  var b13value = sheet.getRange("b13").getValue();
+  
+
+  var message = "~~~ Report KPI LH_Packed D-1 ~~~" + "\n";
+  if (b3value !== "") {
+    message += "* Ontime   < 90% : " + b3value +  "\n" ;
+
+  }
+  if (b4value !== "") {
+    message += "* Ontime   90% - 95% :" + b4value +   "\n";
+  }
+  if (b5value !== "") {
+    message += "* Ontime   95% - 97% : " + b5value +   "\n" ;
+     
+  }
+  if (b6value !== "") {
+    message += "* Ontime   97% - 99% : " + b6value +   "\n" +"\n";
+  }
+
+   message += "~~~ Report KPI Productivity D-1 ~~~" + "\n";
+  if (b10value !== "") {
+    message += "* Prod   < 90% : " + b10value +"\n";
+  }
+  if (b11value !== "") {
+    message += "* Prod   90% - 95% : " + b11value +  "\n" ;
+  }
+  if (b12value !== "") {
+    message += "* Prod   95% - 99% : " + b12value +  "\n" ;
+  }
+  if (b13value !== "") {
+    message += "* Prod   95% - 99% : " + b13value +  "\n" ;
+  }
+  message += "--- Go to this link and check for detail: https://docs.google.com/spreadsheets/d/1Lh2StkW-gy8I2oHp6MeJbVLw3FojCPkEheLsKjEIGsw/edit#gid=138736456 ---";
+
+  var webhookUrl = 'https://openapi.seatalk.io/webhook/group/lN5dJTHLRWaKJwQa9QKNPg';
+
+  // Send the alert message to the group chat via webhook
+  sendAlertMessage(webhookUrl, message);
+}
+
+function sendAlertMessage(webhookUrl, message) {
+  // Set the payload for the webhook
+  var payload = {
+    "tag": "text",
+    "text": {
+      "content": message,
+      "at_all": true
+    }
+  };
+
+  // Set the options for the HTTP request
+  var options = {
+    "method": "POST",
+    "payload": JSON.stringify(payload)
+  };
+
+  // Send the HTTP request to the webhook URL
+  UrlFetchApp.fetch(webhookUrl, options);
+}
