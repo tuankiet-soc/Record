@@ -1,0 +1,80 @@
+function osbooking_1(){
+  var spreadsheeet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = "Alert";
+  var sheet = spreadsheeet.getSheetByName(sheetName);
+
+  var forecast = sheet.getRange("B2").getValue();
+  var osplan = sheet.getRange("B4").getValue();
+  var osbooking = sheet.getRange("B5").getValue();
+  var ratio = sheet.getRange("B6").getValue();
+  var gap = sheet.getRange("B7").getValue();
+  var volume = sheet.getRange("B8").getValue();
+
+  // Format the forecast and volume with commas
+  forecast = formatNumberWithCommas(forecast);
+  volume = formatNumberWithCommas(volume);
+
+  // Get tomorrow's date
+  var tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  var formattedDate = formatDate(tomorrow);
+
+  var message = "--- Review OS Booking for " + formattedDate + " ---\n";
+
+  // Check the ratio and set the appropriate message
+  if (ratio > 1.1) {
+    var formattedRatio = "**" + (ratio * 100).toFixed(2) + "%**";
+    message += "Số booking OS next day vượt " + formattedRatio + " so với plan" + "\n" +
+               "Forecast: " + forecast + "\n" +
+               "OS Plan: " + osplan + "\n" +
+               "OS Booking: " + osbooking + "\n" +
+               "Volume excess: " + volume + "\n";
+  } else if (ratio < 0.9) {
+    var formattedRatio = "**" + ((1 - ratio) * 100).toFixed(2) + "%**";
+    message += "Số booking OS next day thấp hơn " + formattedRatio + " so với plan" + "\n" +
+               "Forecast: " + forecast + "\n" +
+               "OS Plan: " + osplan + "\n" +
+               "OS Booking: " + osbooking + "\n" +
+               "Volume lack: " + volume + "\n";
+  } else {
+    // If the ratio is between 0.9 and 1.1, do not send any message
+    return;
+  }
+
+  var webhookUrl = 'https://openapi.seatalk.io/webhook/group/wVu-_7v2SUmyN94Ajhu77A';
+    
+  // Send the alert message to the group chat via webhook
+  sendAlertMessage(webhookUrl, message);
+}
+
+function sendAlertMessage(webhookUrl, message) {
+  // Set the payload for the webhook
+  var payload = {
+    "tag": "text",
+    "text": {
+       "content": message,
+       "at_all": true
+    }
+  };
+  
+  // Set the options for the HTTP request
+  var options = {
+    "method": "POST",
+    "payload": JSON.stringify(payload),
+    "contentType": "application/json"
+  };
+  
+  // Send the HTTP request to the webhook URL
+  UrlFetchApp.fetch(webhookUrl, options);
+}
+
+function formatNumberWithCommas(number) {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function formatDate(date) {
+  var day = ("0" + date.getDate()).slice(-2);
+  var month = ("0" + (date.getMonth() + 1)).slice(-2);
+  var year = date.getFullYear();
+  return day + "/" + month + "/" + year;
+}
