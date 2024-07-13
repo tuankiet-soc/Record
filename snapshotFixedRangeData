@@ -1,0 +1,37 @@
+function snapshotFixedRangeData() {
+  // Mở spreadsheet và chọn sheet chứa pivot table
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sourceSheet = spreadsheet.getSheetByName('Snapshot phụ'); // Đổi tên sheet nếu cần thiết
+  var targetSheet = spreadsheet.getSheetByName('Snapshot backlog 6-6'); // Đổi tên sheet nếu cần thiết
+  
+  // Kiểm tra nếu sheet snapshot chưa tồn tại, tạo mới
+  if (!targetSheet) {
+    targetSheet = spreadsheet.insertSheet('Snapshot');
+  }
+
+  // Xác định vùng dữ liệu cố định cần snapshot từ A2:B7
+  var range = sourceSheet.getRange('A3:B7');
+  var data = range.getValues();
+
+  // Tìm dòng trống đầu tiên trong cột A của sheet snapshot
+  var lastRow = targetSheet.getLastRow();
+  if (lastRow === 0) {
+    lastRow = 1; // Đảm bảo rằng hàng đầu tiên không bị bỏ qua nếu sheet snapshot đang trống
+  }
+
+  // Sao chép dữ liệu từ vùng chọn sang sheet snapshot
+  for (var i = 0; i < data.length; i++) {
+    for (var j = 0; j < data[i].length; j++) {
+      targetSheet.getRange(lastRow + i, j + 1).setValue(data[i][j]);
+    }
+  }
+  
+  // Thêm cột Date và điền giá trị ngày hiện tại
+  var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "MM/dd/yyyy");
+  targetSheet.getRange(lastRow, data[0].length + 1).setValue('Date');
+  for (var i = 0; i < data.length; i++) {
+    targetSheet.getRange(lastRow + i, data[0].length + 1).setValue(date);
+  }
+  
+  SpreadsheetApp.flush();
+}
