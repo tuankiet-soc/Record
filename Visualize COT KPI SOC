@@ -1,0 +1,122 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from datetime import datetime, timedelta
+import re
+
+# Đường dẫn tới tệp JSON chứa thông tin xác thực
+credentials_path = 'C:/Users/kiet.trantuan/Downloads/fifth-mechanism-425310-s9-48dab9776369.json'
+
+# Thiết lập phạm vi truy cập
+scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+
+# Xác thực và khởi tạo client
+credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_path, scope)
+client = gspread.authorize(credentials)
+
+# Mở Google Sheets bằng tên
+spreadsheet_name = 'OPS Planning - Analytics'  # Thay tên bảng tính vào
+sheet_name = 'COT'  # Thay tên trang tính cụ thể vào
+
+# Mở Google Sheets và trang tính cụ thể
+sheet = client.open(spreadsheet_name).worksheet(sheet_name)
+
+# Lấy tất cả các giá trị từ trang tính
+data = sheet.get_all_values()
+
+# Chuyển đổi dữ liệu thành DataFrame
+df = pd.DataFrame(data[1:], columns=data[0])  # data[1:] bỏ qua hàng đầu tiên, data[0] là tên cột
+
+# Chuyển đổi thời gian từ chuỗi sang timedelta
+def convert_time(time_str):
+    try:
+        days = 0
+        if 'D+' in time_str:
+            days = int(re.search(r'D\+(\d+)', time_str).group(1))
+        elif 'D0' in time_str:
+            days = 0
+
+        time_part = re.search(r'(\d+)h(\d+)?', time_str)
+        if time_part:
+            hours = int(time_part.group(1))
+            minutes = int(time_part.group(2)) if time_part.group(2) else 0
+        else:
+            hours = 0
+            minutes = 0
+        
+        return timedelta(days=days, hours=hours, minutes=minutes)
+    except Exception as e:
+        print(f"Error converting time: {e}, input: {time_str}")
+        return timedelta(hours=0)
+
+# Sử dụng lambda để xử lý giá trị rỗng
+df['SLA Start Time'] = df['SLA Start'].apply(lambda x: timedelta(hours=int(x)) if x != '' else None)
+df['SLA End Time'] = df['SLA End'].apply(lambda x: timedelta(hours=int(x)) if x != '' else None)
+df['Sub Time'] = df['Sub SLA End'].apply(convert_time)
+df['COT_Arrived'] = df['Sub SLA Start'].apply(lambda x: timedelta(hours=int(x)) if x != '' else None)
+
+# Tính toán SLA Processing
+df['SLA Processing'] = df.apply(lambda row: row['SLA End Time'] - row['COT_Arrived'] if row['SLA End Time'] is not None and row['COT_Arrived'] is not None else None, axis=1)
+
+# Lọc dữ liệu cho Station Origin là HCM Mega SOC
+filtered_df = df[df['Station Origin'] == 'HCM Mega SOC']
+
+# Vẽ biểu đồ
+fig, ax = plt.subplots(figsize=(15, 8))
+
+# Thiết lập thời gian bắt đầu và kết thúc cho trục x
+start_time = datetime.strptime("00:00:00", "%H:%M:%S")
+end_time = start_time + timedelta(hours=48)  # 10h D+1
+
+for i, row in filtered_df.iterrows():
+    try:
+        if row['SLA Start Time'] is not None and row['SLA End Time'] is not None:
+            sla_start = start_time + row['SLA Start Time']
+            sla_end = start_time + row['SLA End Time']
+            sub_sla_start = start_time + row['COT_Arrived'] if row['COT_Arrived'] is not None else None
+            sub_sla_end = start_time + row['Sub Time']
+
+            group = row['Group']
+
+            # Vẽ đường kẻ từ SLA Start đến Sub SLA Start và từ Sub SLA Start đến SLA End
+            ax.plot([sla_start, sub_sla_start], [group, group], color='blue', marker='', markersize=10, label='COT' if i == 0 else "")
+            ax.plot([sub_sla_start, sla_end], [group, group], color='blue', marker='', markersize=10)
+            
+            # Thêm mũi tên tại vị trí SLA End
+            ax.annotate('', xy=(sla_end, group), xytext=(sla_start, group), arrowprops=dict(arrowstyle="->", color='blue'))
+            
+            # Thêm điểm và nhãn tại vị trí Sub SLA Start
+            if sub_sla_start:
+                ax.plot(sub_sla_start, group, 'ro')  # Thêm điểm đỏ tại vị trí Sub SLA Start
+                ax.annotate(f'{row["Sub Arrived"]}', (sub_sla_start, group), textcoords="offset points", xytext=(0, 10), ha='center', color='red')
+            
+            # Thêm nhãn tại điểm kết thúc SLA End từ cột Sub SLA End
+            ax.annotate(f'{row["Sub SLA End"]}', (sla_end, group), textcoords="offset points", xytext=(0, 10), ha='center', color='blue')
+            
+            # Thêm nhãn SLA Processing
+            if row['SLA Processing'] is not None:
+                sla_hours = row['SLA Processing'].total_seconds() // 3600
+                ax.annotate(f'{int(sla_hours)}h', (sub_sla_start + (sla_end - sub_sla_start) / 2, group), textcoords="offset points", xytext=(0, -10), ha='center', color='black')
+    except Exception as e:
+        print(f"Error plotting row {i}: {e}")
+
+# Định dạng trục x chỉ hiển thị giờ
+hours = mdates.HourLocator(interval=1)
+h_fmt = mdates.DateFormatter('%H')
+
+ax.xaxis.set_major_locator(hours)
+ax.xaxis.set_major_formatter(h_fmt)
+ax.set_xlim([start_time, end_time])
+
+plt.gcf().autofmt_xdate()
+plt.xlabel('Time')
+plt.ylabel('Group')
+plt.title('Linehaul COT - HCM Mega SOC')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+# Hiển thị biểu đồ
+plt.show()
