@@ -1,15 +1,17 @@
 select
-date(handover_time) handover_date
+date(trip_ata) Arrrived_date
 ,station_name
 ,flag
 ,order_category
 ,buyer_region
 ,whs_id
 ,o_type
-,HOUR(sla_start_ontime) as COT_Arrived
+,HOUR(sla_eta_lhpacked_ontime) as COT
+,HOUR(trip_ata) as arrived_hour
 ,COUNT(distinct shipment_id ) as vol
 from dev_vnbi_spx.soc_kpi_ontime_outdate
-where station_name in ('HCM Mega SOC','Xuyen A SOC','BW SOC','SW SOC')
--- and date(handover_time)
-group by 1,2,3,4,5,6,7,8
+where station_name in ('HCM Mega SOC')
+and buyer_region in ('HCM')
+and date(trip_ata) between date'2024-07-01' and date'2024-07-31' 
+group by 1,2,3,4,5,6,7,8,9
 order by 1 desc;
