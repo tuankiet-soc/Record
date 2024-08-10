@@ -1,0 +1,55 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import base64
+import requests
+import time
+
+# Correct paths for ChromeDriver and profile path
+chrome_driver_path = r'c:\Users\kiett\OneDrive\Máy tính\chromedriver-win64\chromedriver.exe'
+chrome_profile_path = r'C:\Users\kiett\AppData\Local\Google\Chrome\User Data\Profile 11'
+
+# Initialize WebDriver with profile path
+options = webdriver.ChromeOptions()
+options.add_argument(f'user-data-dir={chrome_profile_path}')
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service, options=options)
+
+# URL of the Shopee Xpress Dashboard
+dashboard_url = 'https://spx.shopee.vn/#/dashboard/facility-soc'
+
+# Access Shopee Xpress Dashboard
+driver.get(dashboard_url)
+
+# Wait for the specific element to load fully
+wait = WebDriverWait(driver, 120)  # Wait time is 120 seconds
+element = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, '#mgmt-dashboard-content > div > div > div.index_pc_wrapper__u1bI2 > div > div > div:nth-child(4) > div')))
+
+# Scroll the element into view
+driver.execute_script("arguments[0].scrollIntoView();", element)
+
+# Allow some time for any dynamic content to load
+time.sleep(5)  # Adjust time as necessary
+
+# Take a screenshot of the specific element
+element_screenshot = element.screenshot_as_png
+base64_encoded_image = base64.b64encode(element_screenshot).decode("utf-8")
+
+# Send the screenshot to the webhook
+webhook_url = 'https://openapi.seatalk.io/webhook/group/fBru_eRcTQOKB6VkrXGnIg'
+json_payload = {
+    "tag": "image",
+    "image_base64": {"content": base64_encoded_image}
+}
+response = requests.post(webhook_url, json=json_payload)
+
+# Check the result of sending the webhook
+if response.status_code == 204:
+    print("Screenshot has been sent successfully!")
+else:
+    print("Failed to send screenshot:", response.status_code)
+
+# Close the browser after completion
+driver.quit()
