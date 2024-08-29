@@ -1,0 +1,27 @@
+import gspread
+from google.oauth2.service_account import Credentials
+import pyttsx3
+
+# Đường dẫn tới tệp JSON chứa thông tin xác thực
+creds_path = 'C:/Users/kiet.trantuan/Downloads/check-performance-soc-e9cd44658b59.json'
+
+# Phạm vi quyền hạn
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+# Xác thực và kết nối tới Google Sheets
+creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+client = gspread.authorize(creds)
+
+# Mở Google Sheet bằng ID
+sheet_id = '1SfLKJhEtZij4G5GQ3CGnaCL0xJCL3peACtHX_pVA8Gs'  # Thay bằng ID của Google Sheet của bạn
+sheet = client.open_by_key(sheet_id).sheet1
+
+# Đọc thông tin từ ô chỉ định (ví dụ: A1)
+cell_value = sheet.acell('A1').value
+
+# Khởi tạo pyttsx3 để đọc to văn bản
+engine = pyttsx3.init()
+
+# Đọc to thông tin
+engine.say(f'Giá trị trong ô A1 là: {cell_value}')
+engine.runAndWait()
