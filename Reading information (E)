@@ -1,9 +1,10 @@
 import gspread
 from google.oauth2.service_account import Credentials
-import pyttsx3
+from gtts import gTTS
+import os
 
 # Đường dẫn tới tệp JSON chứa thông tin xác thực
-creds_path = 'C:/Users/kiet.trantuan/Downloads/check-performance-soc-e9cd44658b59.json'
+creds_path = 'c:/Users/kiett/Downloads/check-performance-soc-e23803087cf9.json'
 
 # Phạm vi quyền hạn
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -14,14 +15,41 @@ client = gspread.authorize(creds)
 
 # Mở Google Sheet bằng ID
 sheet_id = '1SfLKJhEtZij4G5GQ3CGnaCL0xJCL3peACtHX_pVA8Gs'  # Thay bằng ID của Google Sheet của bạn
-sheet = client.open_by_key(sheet_id).sheet1
+sheet = client.open_by_key(sheet_id).worksheet('Alert 15')  # Chọn sheet cụ thể
 
-# Đọc thông tin từ ô chỉ định (ví dụ: A1)
-cell_value = sheet.acell('A1').value
+# Đọc giá trị từ các ô chỉ định
+value_A4 = sheet.acell('A4').value
+value_B4 = sheet.acell('B4').value
+value_C4 = sheet.acell('C4').value
+value_D4 = sheet.acell('D4').value
+value_E4 = sheet.acell('E4').value
+value_F4 = sheet.acell('F4').value
+value_A5 = sheet.acell('A5').value
+value_B5 = sheet.acell('B5').value
+value_C5 = sheet.acell('C5').value
+value_D5 = sheet.acell('D5').value
+value_E5 = sheet.acell('E5').value
+value_F5 = sheet.acell('F5').value
+value_A6 = sheet.acell('A6').value
+value_B6 = sheet.acell('B6').value
+value_C6 = sheet.acell('C6').value
+value_D6 = sheet.acell('D6').value
+value_E6 = sheet.acell('E6').value
+value_F6 = sheet.acell('F6').value
+value_A7 = sheet.acell('A7').value
+value_B7 = sheet.acell('B7').value
 
-# Khởi tạo pyttsx3 để đọc to văn bản
-engine = pyttsx3.init()
+# Tạo chuỗi văn bản kết hợp giá trị từ các ô và văn bản tùy chỉnh
+text_to_speak = (
+    f"Xin thông báo : {value_A4} : {value_B4}. Trong đó có: {value_C4} xe Full Bao. :{value_D4} xe Full Bulky. : {value_E4} xe Mix và :{value_F4} trip ảo. "
+    f": {value_A5} : {value_B5}. Trong đó có: {value_C5} xe Full Bao. :{value_D5} xe Full Bulky. : {value_E5} xe Mix và :{value_F5} trip ảo. "
+    f": {value_A6} : {value_B6}. Trong đó có: {value_C6} xe Full Bao. :{value_D6} xe Full Bulky. : {value_E6} xe Mix và :{value_F6} trip ảo. "
+    f": {value_A7} : {value_B7}. Xin cám ơn các bạn"
+)
 
-# Đọc to thông tin
-engine.say(f'Giá trị trong ô A1 là: {cell_value}')
-engine.runAndWait()
+# Sử dụng gTTS để chuyển văn bản thành giọng nói
+tts = gTTS(text=text_to_speak, lang='vi')
+tts.save("output.mp3")
+
+# Phát âm thanh
+os.system("start output.mp3")
