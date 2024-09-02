@@ -1,0 +1,24 @@
+from selenium import webdriver
+import time
+
+# Thiết lập trình duyệt Chrome
+driver = webdriver.Chrome()
+
+# Danh sách các URL Looker Studio
+urls = [
+    'https://lookerstudio.google.com/u/0/reporting/0cda784c-0556-49ac-a263-2f4e2396b103/page/CVaAE',
+    'https://lookerstudio.google.com/u/0/reporting/0cda784c-0556-49ac-a263-2f4e2396b103/page/p_ko1ymj3nkd',
+    'https://lookerstudio.google.com/u/0/reporting/0cda784c-0556-49ac-a263-2f4e2396b103/page/p_ju6xq72nkd'
+]
+
+# Thời gian chờ giữa các lần chuyển đổi (10 giây)
+interval = 10
+
+# Vòng lặp vô hạn để mở và chuyển đổi giữa các URL
+try:
+    while True:
+        for url in urls:
+            driver.get(url)
+            time.sleep(interval)
+finally:
+    driver.quit()
