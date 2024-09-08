@@ -1,0 +1,52 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import base64
+import requests
+import time
+
+# Correct paths for ChromeDriver and profile path
+chrome_driver_path = r'c:\Users\kiett\OneDrive\Máy tính\chromedriver-win64\chromedriver.exe'
+chrome_profile_path = r'C:\Users\kiett\AppData\Local\Google\Chrome\User Data\Profile 11'
+
+# Initialize WebDriver with profile path
+options = webdriver.ChromeOptions()
+options.add_argument(f'user-data-dir={chrome_profile_path}')
+service = Service(chrome_driver_path)
+driver = webdriver.Chrome(service=service, options=options)
+
+# URL of the Google Sheet
+spreadsheet_url = 'https://docs.google.com/spreadsheets/d/1SfLKJhEtZij4G5GQ3CGnaCL0xJCL3peACtHX_pVA8Gs/edit?gid=1702822321#gid=1702822321'
+
+# Access Google Sheet and log in
+driver.get(spreadsheet_url)
+
+# Wait for the page to load after logging in
+wait = WebDriverWait(driver, 120)  # Wait time is 120 seconds
+wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="docs-titlebar"]')))  # Wait until the title element of Google Sheets appears
+
+# Continue with other operations on Google Sheet
+
+# Take a screenshot and convert to base64
+screenshot = driver.get_screenshot_as_png()
+base64_encoded_image = base64.b64encode(screenshot).decode("utf-8")
+time.sleep(10)
+
+# Send the screenshot to the webhook
+webhook_url = 'https://openapi.seatalk.io/webhook/group/FU8CtfGHQPmCoxU3x2ajmw'
+json_payload = {
+    "tag": "image",
+    "image_base64": {"content": base64_encoded_image}
+}
+response = requests.post(webhook_url, json=json_payload)
+
+# Check the result of sending the webhook
+if response.status_code == 204:
+    print("Screenshot has been sent successfully!")
+else:
+    print("Failed to send screenshot:", response.status_code)
+
+# Close the browser after completion
+driver.quit()
