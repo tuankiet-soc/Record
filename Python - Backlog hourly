@@ -1,0 +1,78 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# Đường dẫn đến ChromeDriver mà bạn đã tải về
+chrome_driver_path = "c:/Users/kiett/OneDrive/Máy tính/chromedriver-win64/chromedriver.exe"
+
+# Đường dẫn đến profile Chrome mà bạn muốn sử dụng
+chrome_profile_path = r'C:/Users/kiett/AppData/Local/Google/Chrome/User Data/Profile 11'
+
+# Tạo tùy chọn cho Chrome
+chrome_options = Options()
+
+# Chỉ định đường dẫn đến profile Chrome đã lưu
+chrome_options.add_argument(f"user-data-dir={chrome_profile_path}")
+
+# Tạo service cho ChromeDriver
+service = Service(executable_path=chrome_driver_path)
+
+# Khởi động trình duyệt Chrome với các tùy chọn đã chỉ định
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
+# Mở trang web
+driver.get("https://spx.shopee.vn/#/dashboard/facility-soc/historical-data")
+
+# Đợi trang web tải xong
+time.sleep(10)  # Điều chỉnh thời gian này nếu cần
+
+# Bấm nút "View More" để tải thêm dữ liệu
+view_more_button = driver.find_element(By.CSS_SELECTOR, "#mgmt-dashboard-content > div > div > div.index_pc_wrapper__u1bI2 > div > div > div:nth-child(2) > div > div.med-card-content > div.index_card-content-wrapper__DCipM.index_throughput-chart__cWgiB > div.med-collapse > div.med-collapse-tag > span")
+view_more_button.click()
+
+# Đợi thêm thời gian để dữ liệu mới được tải (nếu cần)
+time.sleep(5)  # Điều chỉnh thời gian này nếu cần
+
+# Lấy dữ liệu từ phần header của bảng (thead)
+header_element = driver.find_element(By.CSS_SELECTOR, "#mgmt-dashboard-content > div > div > div.index_pc_wrapper__u1bI2 > div > div > div:nth-child(2) > div > div.med-card-content > div.index_card-content-wrapper__DCipM.index_throughput-chart__cWgiB > div.ssc-react-table.index_historical-detail__k-aMy.med-table.med-ssc-table.ssc-react-table-has-header > div > div > div > table > thead")
+
+header_row = header_element.find_element(By.TAG_NAME, "tr")
+header_cols = header_row.find_elements(By.TAG_NAME, "th")
+header_data = [col.text for col in header_cols]
+
+# Lấy dữ liệu từ phần body của bảng (tbody)
+table_body_element = driver.find_element(By.CSS_SELECTOR, "#mgmt-dashboard-content > div > div > div.index_pc_wrapper__u1bI2 > div > div > div:nth-child(2) > div > div.med-card-content > div.index_card-content-wrapper__DCipM.index_throughput-chart__cWgiB > div.ssc-react-table.index_historical-detail__k-aMy.med-table.med-ssc-table.ssc-react-table-has-header > div > div > div > table > tbody")
+
+rows = table_body_element.find_elements(By.TAG_NAME, "tr")
+body_data = []
+for row in rows:
+    cols = row.find_elements(By.TAG_NAME, "td")
+    body_data.append([col.text for col in cols])
+
+# Combine header and body data for Google Sheets
+data = [header_data] + body_data
+
+# Đóng trình duyệt
+driver.quit()
+
+# Cấu hình Google Sheets API
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds = ServiceAccountCredentials.from_json_keyfile_name('c:/Users/kiett/Downloads/check-performance-soc-e23803087cf9.json', scope)
+client = gspread.authorize(creds)
+
+# Mở Google Sheets
+sheet = client.open_by_url("https://docs.google.com/spreadsheets/d/1AbAiQDiQNIUm9fNKuxNm-GAOKsEXE5aOiiJicz5ML3U/edit?gid=0#gid=0")
+worksheet = sheet.get_worksheet(0)
+
+# Xóa dữ liệu cũ trong Sheet (nếu cần)
+worksheet.clear()
+
+# Cập nhật dữ liệu mới vào Google Sheets
+for i, row in enumerate(data):
+    worksheet.insert_row(row, i + 1)
+
+print("Dữ liệu đã được cập nhật thành công.")
