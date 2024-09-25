@@ -1,0 +1,52 @@
+function sendChartAsBase64ToWebhook() {
+  // URL của webhook
+  var webhookUrl = 'https://openapi.seatalk.io/webhook/group/wVu-_7v2SUmyN94Ajhu77A';
+
+  // Lấy Google Sheet hiện tại và chọn sheet chứa biểu đồ
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Report control Tower");
+
+  if (!sheet) {
+    Logger.log("Sheet 'Report control Tower' không tồn tại!");
+    return;
+  }
+
+  // Lấy biểu đồ đầu tiên từ sheet
+  var charts = sheet.getCharts();
+  if (charts.length === 0) {
+    Logger.log("Không có biểu đồ nào trong sheet này.");
+    return;
+  }
+
+  // Lấy biểu đồ đầu tiên
+  var chart = charts[0];
+
+  // Xuất biểu đồ dưới dạng hình ảnh (blob)
+  var imageBlob = chart.getAs('image/png');
+
+  // Chuyển đổi hình ảnh thành base64
+  var base64EncodedImage = Utilities.base64Encode(imageBlob.getBytes());
+
+  // Tạo payload để gửi biểu đồ dưới dạng base64 qua webhook
+  var jsonPayload = {
+    "tag": "image",
+    "image_base64": { "content": base64EncodedImage }
+  };
+
+  // Gửi payload qua HTTP POST đến webhook URL
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(jsonPayload)
+  };
+
+  var response = UrlFetchApp.fetch(webhookUrl, options);
+
+  // Điều chỉnh để kiểm tra phản hồi có mã 200 hoặc 204 đều là thành công
+  if (response.getResponseCode() == 200 || response.getResponseCode() == 204) {
+    Logger.log("Biểu đồ đã được gửi thành công!");
+  } else {
+    Logger.log("Gửi biểu đồ thất bại: " + response.getResponseCode());
+    Logger.log(response.getContentText()); // Ghi lại phản hồi từ webhook
+  }
+}
