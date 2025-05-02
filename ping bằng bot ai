@@ -1,0 +1,103 @@
+import requests
+
+# ⚙️ Thông tin ứng dụng từ SeaTalk Developer Console
+APP_ID = "NjI5MjA3MzQ5Mzgx"
+APP_SECRET = "VQCj3ZA_OVTrp2XMa0a9USzmpFKqc7H5"
+
+# 📧 Danh sách email cần gửi
+EMAILS = [
+    "kiet.trantuan@shopee.com",
+]
+
+# ===== 1. Lấy access token =====
+def get_access_token():
+    url = "https://openapi.seatalk.io/auth/app_access_token"
+    headers = {"Content-Type": "application/json"}
+    payload = {"app_id": APP_ID, "app_secret": APP_SECRET}
+    res = requests.post(url, headers=headers, json=payload)
+    data = res.json()
+    if res.status_code == 200 and data.get("code") == 0:
+        print("✅ Lấy token thành công")
+        return data["app_access_token"]
+    else:
+        print("❌ Lỗi khi lấy token:", data)
+        return None
+
+# ===== 2. Lấy employee_code từ nhiều email =====
+def get_employee_codes_from_emails(token, emails):
+    url = "https://openapi.seatalk.io/contacts/v2/get_employee_code_with_email"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {"emails": emails}
+    res = requests.post(url, headers=headers, json=payload)
+    data = res.json()
+    print("📦 Response:", data)
+
+    email_to_code = {}
+    if res.status_code == 200 and data.get("code") == 0:
+        for emp in data.get("employees", []):
+            if emp.get("employee_code") and emp.get("employee_status") == 2:
+                email_to_code[emp["email"]] = emp["employee_code"]
+    return email_to_code
+
+# ===== 3. Gửi interactive message cho từng employee_code =====
+def send_interactive_message(token, employee_code):
+    url = "https://openapi.seatalk.io/messaging/v2/single_chat"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "employee_code": employee_code,
+        "message": {
+            "tag": "interactive_message",
+            "interactive_message": {
+                "elements": [
+                    {
+                        "element_type": "title",
+                        "title": {"text": "👋 Chào mừng bạn đến với SPX Express!"}
+                    },
+                    {
+                        "element_type": "description",
+                        "description": {
+                            "format": 1,
+                            "text": "Cảm ơn bạn đã tham gia vào đại gia đình SPX Express. Vui lòng chọn mục bên dưới để được hướng dẫn:"
+                        }
+                    },
+                    {
+                        "element_type": "button",
+                        "button": {
+                            "button_type": "redirect",
+                            "text": "Đào tạo hội nhập dành cho nhân viên mới",
+                            "mobile_link": {
+                                "type": "web",
+                                "path": "https://docs.google.com/presentation/d/1LVTl5Rjy-t9T3YZLK3RASeeTAJrk6kjjPTFsggmRem8/edit#slide=id.p1"
+                            },
+                            "desktop_link": {
+                                "type": "web",
+                                "path": "https://docs.google.com/presentation/d/1LVTl5Rjy-t9T3YZLK3RASeeTAJrk6kjjPTFsggmRem8/edit#slide=id.p1"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+    res = requests.post(url, headers=headers, json=payload)
+    print(f"📨 Gửi đến {employee_code} | Status: {res.status_code} | Res:", res.json())
+
+# ===== THỰC THI TOÀN BỘ =====
+if __name__ == "__main__":
+    token = get_access_token()
+    if token:
+        email_to_code = get_employee_codes_from_emails(token, EMAILS)
+        for email in EMAILS:
+            emp_code = email_to_code.get(email)
+            if emp_code:
+                print(f"✅ Gửi cho {email} với mã {emp_code}")
+                send_interactive_message(token, emp_code)
+            else:
+                print(f"⚠️ Không tìm thấy hoặc không hợp lệ: {email}")
